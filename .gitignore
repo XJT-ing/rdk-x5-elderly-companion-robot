@@ -27,3 +27,23 @@ src/wheeltec_robot_slam/orb_slam_2_ros/orb_slam_2_ros
 *.jet
 *.so
 *.gif
+
+# Sensitive config files
+*.env
+*_secret*
+config.local.*
+*.key
+*.pem
+
+# Build artifacts
+build/
+install/
+log/
+Log/
+*.pyc
+__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -95,72 +95,75 @@ source /opt/tros/humble/setup.bash
 
 ## 启动步骤
 
-### 方式一：一键启动（推荐）
+  完整抓取指令流程                                                                                                      
+  终端 0（前置）— 启动 CAN 总线连接                                                                                     
+  sudo airbot_server -i can1 -p 50001
 
-```bash
-# 先确保 AIRBOT 服务已启动
-bash /home/sunrise/robot/start_airbot_can0.sh
+  保持运行，不要关闭。
 
-# 启动全链路
-bash /home/sunrise/robot/start_auto_grasp.sh
-```
+  ---
+  终端 1 — 机械臂归位
 
-### 方式二：分步启动
+  python3 /home/sunrise/robot/hand_to_eye/move_to_lower_home.py
 
-**终端 0 — AIRBOT 服务**
+  等待执行完成（打印 "Moved to lower, more tolerant home pose." 后关闭即可）。
 
-```bash
-sudo airbot_server -i can1 -p 50001
-# 验证服务已监听
-sudo ss -lntp | grep 50001
-```
+  ---
+  终端 2 — 启动相机
 
-**终端 1 — Orbbec 相机**
+  source /opt/ros/humble/setup.bash
+  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
+  ros2 launch orbbec_camera gemini2.launch.py \
+      enable_depth:=true \
+      enable_ir:=false \
+      enable_accel:=false \
+      enable_gyro:=false \
+      enable_point_cloud:=false \
+      enable_colored_point_cloud:=false \
+      enable_d2c_viewer:=false \
+      color_width:=640 \
+      color_height:=480 \
+      color_fps:=30
 
-```bash
-source /opt/ros/humble/setup.bash
-source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-ros2 launch orbbec_camera gemini2.launch.py
-```
+  ---
+  终端 3 — 检测节点
 
-**终端 2 — 目标检测**
+  source /opt/ros/humble/setup.bash
+  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
+  ros2 run detector duck_detector_node
 
-```bash
-source /opt/ros/humble/setup.bash
-source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-# 选择以下之一：
-ros2 run detector duck_detector_node          # 小黄鸭检测
-ros2 run detector apple_detector_node         # 苹果检测
-ros2 run detector box_detector_node           # 绿色药盒检测
-# 或使用 YOLO 通用检测：
-ros2 run detect_yolo detect_yolo_node
-```
+  ▎ 其他物体：把 duck 换成 apple 或 box
 
-**终端 3 — 主抓取链路**
+  查看 YOLO 检测结果（如果用 YOLO 替代独立检测器）：
 
-```bash
-source /opt/ros/humble/setup.bash
-source /home/sunrise/robot/robot_ws/install/setup.bash
-ros2 launch robot_bringup open_loop_grasp.launch.py
-```
+  source /opt/ros/humble/setup.bash
+  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
+  ros2 topic echo /detect_yolo/bottle_position   # 瓶子
 
-**终端 4 — 坐标转换桥**
+  ---
+  终端 4 — 自动抓取
 
-```bash
-source /opt/ros/humble/setup.bash
-source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-source /home/sunrise/robot/robot_ws/install/setup.bash
-python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py
-```
+  source /opt/ros/humble/setup.bash
+  source /home/sunrise/robot/robot_ws/install/setup.bash
+  ros2 launch robot_bringup open_loop_grasp.launch.py
 
-**终端 5 — 情绪识别（可选）**
+  ---
+  终端 5 — 相机坐标到基座变换
 
-```bash
-source /opt/ros/humble/setup.bash
-source /opt/tros/humble/setup.bash
-source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-python3 /home/sunrise/robot/Orbbec_ws/src/emotion_local/emotion_local/emotion_fusion_node.py
-```
+  source /opt/ros/humble/setup.bash
+  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
+  source /home/sunrise/robot/robot_ws/install/setup.bash
+  python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py
+
+
+  ---
+  验证用的辅助命令
+
+  查看相机检测到的目标在 base_link 下的坐标：
+
+  source /opt/ros/humble/setup.bash
+  ros2 topic echo /visual_target_base
+
 
 ## 抓取数据流
 
@@ -257,21 +260,27 @@ ros2 topic echo /robot_arm/executor_status
 ros2 topic list | grep -E "(duck|visual|robot_arm|emotion)"
 ```
 
-## 常见问题
 
-| 问题 | 排查步骤 |
-|------|----------|
-| 机械臂不动 | 1. 检查 `airbot_server` 是否监听 50001 2. 查看 `/robot_arm/executor_status` 是否为 ERROR |
-| 坐标明显偏移 | 确认深度图与彩色图已对齐，检查 camera_info 是否正确 |
-| 夹爪不动作 | 确认 `/robot_arm/executor_status` 为 BUSY/IDLE，不在 ERROR 状态 |
-| 抓取到空中 | 检查手眼标定参数（`hand_to_eye/camera_to_base_transform.py` 中的变换矩阵） |
+##五类情绪识别（happy、neutral、surprise、low_mood、negative_distress）
+ 
+终端1 — 启动相机                                                                                                      
+source /opt/ros/humble/setup.bash
+source ~/robot/Orbbec_ws/install/setup.bash
+ros2 launch orbbec_camera gemini2.launch.py
 
-## 维护说明
+终端2 — 启动情绪识别
+source /opt/ros/humble/setup.bash                                                                                       
+source /opt/tros/humble/setup.bash
 
-- **`arm_executor_node.py`** 是唯一允许直接调用 AIRBOT SDK 的节点，不要在其他地方直接调用 SDK
-- **`grasp_task_open_loop.py`** 是当前主抓取入口，旧的 `auto_pick_from_base.py` 仅供调试参考
-- **`end_position_publisher.py`** 直接连接 SDK，不要和主链路同时运行
-- 不在主链路中使用 ROS2 Action 或 MoveIt
+可视化：
+python3 ~/robot/Orbbec_ws/src/emotion_local/emotion_local/emotion_fusion_node.py --ros-args -p show_image:=true 
+无窗口：
+python3 ~/robot/Orbbec_ws/src/emotion_local/emotion_local/emotion_fusion_node.py
+
+终端3 — 看 JSON 结果
+source /opt/ros/humble/setup.bash
+ros2 topic echo /emotion/result
+
 
 ## 仓库信息
 

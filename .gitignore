@@ -1,49 +1,114 @@
-build/
-install/
-log/
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
 .vscode/
 .vscode-server/
 .idea/
-.DS_Store
-Thumbs.db
-.ros/
-*.deb
-*.tar.xz
-*.pcm
-*.log
-node_modules/
-src/depend/serial_ros2
-src/wheeltec_robot_slam/orb_slam_2_ros/orb_slam_2_ros
+*.swp
+*.swo
+*.tmp
 
-# Large binary files
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+.eggs/
+.pytest_cache/
+
+# =========================
+# ROS 2 / colcon build outputs
+# =========================
+build/
+install/
+log/
+logs/
+Log/
+
+**/build/
+**/install/
+**/log/
+**/logs/
+
+# =========================
+# ROS runtime / datasets
+# =========================
+.ros/
 *.bag
-*.stl
-*.STL
+*.db3
+*.mcap
+
+# =========================
+# Large model / binary files
+# =========================
+*.onnx
+*.pt
+*.pth
+*.engine
+*.bin
 *.jet
 *.so
-*.gif
+*.deb
+*.tar.xz
+*.zip
+*.rar
+*.7z
 
+# =========================
+# Generated media / logs
+# =========================
+*.log
+*.gif
+*.mp4
+*.avi
+*.wav
+*.pcm
+
+# =========================
+# CAD / mesh files
+# =========================
+*.stl
+*.STL
+
+# =========================
 # Sensitive config files
+# =========================
 *.env
+.env
+.env.*
 *_secret*
+*secret*
+*password*
+*token*
 config.local.*
 *.key
 *.pem
 
-# Build artifacts
-build/
-install/
-log/
-Log/
-*.pyc
-__pycache__/
+# =========================
+# Local project cache
+# =========================
+node_modules/
+src/depend/serial_ros2
+src/wheeltec_robot_slam/orb_slam_2_ros/orb_slam_2_ros
 
-# IDE
-.vscode/
-.idea/
-*.swp
+# =========================
+# Hand-eye generated data
+# =========================
+hand_to_eye/data/images/
+hand_to_eye/data/preview/
+hand_to_eye/data/handeye_output/
+vision_arm_x5/hand_to_eye/data/images/
+vision_arm_x5/hand_to_eye/data/preview/
+vision_arm_x5/hand_to_eye/data/handeye_output/
+
+# =========================
+# Voice model files
+# =========================
+onnx_model/
+**/onnx_model/

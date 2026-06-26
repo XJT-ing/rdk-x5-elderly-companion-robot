@@ -1,89 +1,41 @@
-  ## 完整抓取指令流程                                                                                                      
-  终端 0（前置）— 启动 CAN 总线连接                                                                                     
-  sudo airbot_server -i can1 -p 50001
+# Vision Arm X5 — RGB-D 视觉感知与 AIRBOT 机械臂抓取子系统
 
-  保持运行，不要关闭。
+本目录为独居老人陪护机器人项目中的视觉机械臂子系统，运行在另一块 RDK X5 上，主要负责 Orbbec Gemini2 RGB-D 相机采集、居家物品检测、三维目标定位、手眼标定、AIRBOT Play 六轴机械臂抓取和面部情绪识别。
 
-  ---
-  终端 1 — 机械臂归位
+## 1. 子系统定位
 
-  python3 /home/sunrise/robot/hand_to_eye/move_to_lower_home.py
+`vision_arm_x5` 是整机系统中的“视觉感知与抓取执行中心”，主要功能包括：
 
-  等待执行完成（打印 "Moved to lower, more tolerant home pose." 后关闭即可）。
+- 启动 Gemini2 RGB-D 相机并发布彩色图、深度图；
+- 检测常见居家物品，例如苹果、小鸭、药盒等；
+- 根据像素位置和深度信息计算目标三维坐标；
+- 通过手眼标定结果将相机坐标转换到机械臂基座坐标系；
+- 控制 AIRBOT Play 机械臂和 G2 夹爪执行抓取；
+- 识别人脸情绪状态，为主动陪护提供感知结果；
+- 通过 ROS 2 DDS 与底盘语音子系统进行任务协同。
 
-  ---
-  终端 2 — 启动相机
+## 2. 目录结构
 
-  source /opt/ros/humble/setup.bash
-  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-  ros2 launch orbbec_camera gemini2.launch.py \
-      enable_depth:=true \
-      enable_ir:=false \
-      enable_accel:=false \
-      enable_gyro:=false \
-      enable_point_cloud:=false \
-      enable_colored_point_cloud:=false \
-      enable_d2c_viewer:=false \
-      color_width:=640 \
-      color_height:=480 \
-      color_fps:=30
-
-  ---
-  终端 3 — 检测节点
-
-  source /opt/ros/humble/setup.bash
-  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-  ros2 run detector duck_detector_node
-
-  ▎ 其他物体：把 duck 换成 apple 或 box
-
-  查看 YOLO 检测结果（如果用 YOLO 替代独立检测器）：
-
-  source /opt/ros/humble/setup.bash
-  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-  ros2 topic echo /detect_yolo/bottle_position   # 瓶子
-
-  ---
-  终端 4 — 自动抓取
-
-  source /opt/ros/humble/setup.bash
-  source /home/sunrise/robot/robot_ws/install/setup.bash
-  ros2 launch robot_bringup open_loop_grasp.launch.py
-
-  ---
-  终端 5 — 相机坐标到基座变换
-
-  source /opt/ros/humble/setup.bash
-  source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-  source /home/sunrise/robot/robot_ws/install/setup.bash
-  python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py
-
-
-  ---
-  验证用的辅助命令
-
-  查看相机检测到的目标在 base_link 下的坐标：
-
-  source /opt/ros/humble/setup.bash
-  ros2 topic echo /visual_target_base
-
-
- ## 五类情绪识别（happy、neutral、surprise、low_mood、negative_distress）
-终端1 — 启动相机                                                                                                      
-source /opt/ros/humble/setup.bash
-source ~/robot/Orbbec_ws/install/setup.bash
-ros2 launch orbbec_camera gemini2.launch.py
-
-终端2 — 启动情绪识别
-source /opt/ros/humble/setup.bash                                                                                       
-source /opt/tros/humble/setup.bash
-
-可视化：
-python3 ~/robot/Orbbec_ws/src/emotion_local/emotion_local/emotion_fusion_node.py --ros-args -p show_image:=true 
-无窗口：
-python3 ~/robot/Orbbec_ws/src/emotion_local/emotion_local/emotion_fusion_node.py
-
-终端3 — 看 JSON 结果
-source /opt/ros/humble/setup.bash
-ros2 topic echo /emotion/result
-
+```text
+vision_arm_x5/
+├── README.md
+├── .gitignore
+├── Orbbec_ws/                  # Gemini2 相机与视觉检测 ROS 2 工作空间
+│   └── src/
+│       ├── detect_yolo/        # YOLO 通用物体检测
+│       ├── detector/           # 苹果、小鸭、药盒等专用检测节点
+│       ├── emotion/            # 情绪识别相关模块
+│       ├── emotion_landmark_cpp/
+│       └── emotion_local/
+├── robot_ws/                   # AIRBOT 机械臂 ROS 2 工作空间
+│   └── src/
+│       ├── robot_arm_driver/   # 机械臂底层驱动
+│       ├── robot_arm_interface/# 机械臂接口封装
+│       ├── robot_bringup/      # 启动文件与配置
+│       ├── robot_msgs/         # 自定义消息
+│       └── robot_tasks/        # 抓取任务状态机
+├── hand_to_eye/                # 手眼标定与坐标转换
+├── docs/                       # 子系统说明文档
+├── deploy/systemd/             # systemd 部署文件
+├── start_airbot_can0.sh        # AIRBOT 服务启动脚本
+└── start_auto_grasp.sh         # 自动抓取链路启动脚本

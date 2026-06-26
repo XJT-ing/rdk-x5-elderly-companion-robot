@@ -1,4 +1,3 @@
-````markdown
 # 基于 RDK X5 的集成多模态感知与智能决策的独居老人陪护机器人
 
 > 嵌入式芯片与系统设计竞赛应用赛道作品源码仓库  
@@ -79,7 +78,7 @@
 │ AIRBOT Play 抓取状态机           │
 │ 面部情绪识别                    │
 └───────────────────────────────┘
-````
+```
 
 ## 6. 仓库结构
 
@@ -115,9 +114,6 @@ rdk-x5-elderly-companion-robot/
 │   ├── deploy/systemd/         # systemd 部署相关文件
 │   ├── start_airbot_can0.sh
 │   └── start_auto_grasp.sh
-├── scripts/                    # 系统级启动提示与话题检查脚本
-├── docs/                       # 项目级文档说明
-└── assets/                     # 项目图片、系统框图、运行效果图等素材说明
 ```
 
 ## 7. 快速开始
@@ -171,25 +167,32 @@ vision_arm_x5/README.md
 
 ## 8. 系统级启动参考
 
-底盘语音 X5：
+底盘语音 X5 可参考 `chassis_voice_x5/ros_voice/README.md` 编译并启动语音链路：
 
 ```bash
-bash scripts/start_chassis_voice.sh
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch ros_voice voice.launch.py
 ```
 
-视觉机械臂 X5：
+视觉机械臂 X5 推荐先单独启动 AIRBOT CAN 服务，再启动视觉抓取链路：
 
 ```bash
-bash scripts/start_vision_arm.sh
+bash /home/sunrise/robot/start_airbot_can0.sh
+bash /home/sunrise/robot/start_auto_grasp.sh
 ```
 
-检查系统话题：
+也可以按 `vision_arm_x5/docs/service_robot_interface.md` 中的多终端方式逐个启动相机、检测、抓取状态机和坐标转换脚本，便于联调时排查问题。
+
+常用检查命令：
 
 ```bash
-bash scripts/check_system_topics.sh
+ros2 topic list
+ros2 topic echo /visual_target_base --once
+ros2 topic echo /robot_arm/executor_status --once
 ```
 
-说明：`scripts/` 中的脚本主要用于提示和检查。由于不同实验环境下工作空间路径、设备号、CAN 口、模型路径可能不同，正式运行前需要结合实际部署路径进行调整。
+说明：不同实验环境下工作空间路径、设备号、CAN 口、模型路径可能不同，正式运行前需要结合实际部署路径进行调整。
 
 ## 9. 关键 ROS 2 话题
 
@@ -200,11 +203,11 @@ bash scripts/check_system_topics.sh
 | `/odom`               | `nav_msgs/msg/Odometry`          | 底盘里程计             |
 | `/voice/command`      | `std_msgs/msg/String`            | 语音识别后的文本指令        |
 | `/command`            | `std_msgs/msg/String`            | 大模型生成的结构化控制命令     |
-| `/apple_position`     | `geometry_msgs/msg/PointStamped` | 苹果目标在相机坐标系下的位置    |
-| `/duck_position_base` | `geometry_msgs/msg/PointStamped` | 小鸭目标在机械臂基座坐标系下的位置 |
-| `/box_position_base`  | `geometry_msgs/msg/PointStamped` | 药盒目标在机械臂基座坐标系下的位置 |
-| `/visual_target_base` | `geometry_msgs/msg/PointStamped` | 视觉目标在基座坐标系下的统一输出  |
+| `/duck_position`      | `geometry_msgs/msg/PointStamped` | 小鸭目标在相机坐标系下的位置      |
+| `/apple_position`     | `geometry_msgs/msg/PointStamped` | 苹果目标在相机坐标系下的位置      |
+| `/box_position`       | `geometry_msgs/msg/PointStamped` | 药盒目标在相机坐标系下的位置      |
+| `/robot_arm/end_pose` | `geometry_msgs/msg/PoseStamped`  | 机械臂末端在 `base_link` 下的位姿 |
+| `/visual_target_base` | `robot_msgs/msg/VisualTarget`    | 视觉目标在 `base_link` 下的统一抓取输入 |
+| `/robot_arm/cart_waypoints` | `geometry_msgs/msg/PoseArray` | 抓取状态机到执行器的内部路径点话题 |
+| `/robot_arm/executor_status` | `std_msgs/msg/String`       | 机械臂执行器状态反馈        |
 | `/emotion/result`     | `std_msgs/msg/String`            | 情绪识别 JSON 结果      |
-
-```
-```

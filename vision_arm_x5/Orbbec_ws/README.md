@@ -47,6 +47,6 @@ ros2 topic echo /duck_position --once
 ```bash
 source /opt/ros/humble/setup.bash
 source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-source /home/sunrise/robot/airbot-vision-grasping/robot_ws/install/setup.bash
-python3 /home/sunrise/robot/airbot-vision-grasping/hand_to_eye/camera_to_base_transform.py
+source /home/sunrise/robot/robot_ws/install/setup.bash
+python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py
 ```

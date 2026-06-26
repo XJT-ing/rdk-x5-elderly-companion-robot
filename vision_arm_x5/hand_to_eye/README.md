@@ -20,7 +20,7 @@ camera_to_base_transform.py
 `/visual_target_base` 类型是 `robot_msgs/msg/VisualTarget`，所以启动前必须 source 机械臂工作区：
 
 ```bash
-source /home/sunrise/robot/airbot-vision-grasping/robot_ws/install/setup.bash
+source /home/sunrise/robot/robot_ws/install/setup.bash
 ```
 
 ## 启动
@@ -28,30 +28,31 @@ source /home/sunrise/robot/airbot-vision-grasping/robot_ws/install/setup.bash
 ```bash
 source /opt/ros/humble/setup.bash
 source /home/sunrise/robot/Orbbec_ws/install/setup.bash
-source /home/sunrise/robot/airbot-vision-grasping/robot_ws/install/setup.bash
-python3 /home/sunrise/robot/airbot-vision-grasping/hand_to_eye/camera_to_base_transform.py
+source /home/sunrise/robot/robot_ws/install/setup.bash
+python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py
 ```
 
 ## 可调参数
 
 ```bash
-python3 /home/sunrise/robot/airbot-vision-grasping/hand_to_eye/camera_to_base_transform.py --ros-args \
+python3 /home/sunrise/robot/hand_to_eye/camera_to_base_transform.py --ros-args \
   -p target_frame:=base_link \
   -p max_end_pose_age_sec:=0.5 \
   -p default_confidence:=0.85 \
   -p assume_target_stable:=true \
-  -p republish_rate_hz:=10.0 \
-  -p target_hold_sec:=0.8
+  -p republish_rate_hz:=1.0 \
+  -p target_hold_sec:=0.0 \
+  -p target_timeout_sec:=1.5
 ```
 
-手眼参数默认使用 PARK 结果：
+当前脚本默认手眼参数如下，文档应以 `camera_to_base_transform.py` 中的默认值为准：
 
 ```text
-t_cam2gripper = [-0.0830395307186257, 0.008112286716840913, 0.08580828291231507]
-q_cam2gripper_xyzw = [-0.49270434706957716, 0.5001884081237661, -0.49995706645552335, 0.5070472507158893]
+t_cam2gripper = [0.09135190476527959, -0.07201739513738753, 0.011442796927694777]
+q_cam2gripper_xyzw = [-0.1219551044160354, 0.694256163711082, 0.125630634909801, 0.6981062062667869]
 ```
 
-该含义是 `camera -> gripper`，即 `^gT_c`，不要取反。
+该含义是 `camera -> gripper`，即 `^gT_c`，不要取反。若实机重新标定，请优先通过 ROS 参数覆盖这两个值，并同步更新本文档。
 
 ## legacy 脚本
 

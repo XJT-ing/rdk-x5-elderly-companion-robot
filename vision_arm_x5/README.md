@@ -1,14 +1,17 @@
 # vision_arm_x5
 
-视觉机械臂子系统，运行在视觉/机械臂侧 RDK X5 上。主要负责：
+视觉感知、情绪识别与机械臂执行子系统，运行在视觉/机械臂侧 RDK X5 上。它是整机的“近距离感知与操作中心”，负责识别桌面物品、估计目标三维坐标、驱动 AIRBOT 六轴机械臂抓取，并把视觉和情绪上下文提供给语音/大模型侧。
 
-- Orbbec Gemini2 RGB-D 相机启动与图像发布；
-- YOLO BPU 通用物体检测；
-- 小黄鸭、绿色药盒、大樱桃等传统 detector 检测；
-- 相机坐标到 AIRBOT 机械臂 `base_link` 的坐标转换；
-- AIRBOT Play 抓取状态机与执行器控制；
-- 情绪识别结果转发给语音侧；
-- 订阅语音侧 `/command` 后自动执行识别和抓取。
+## 子系统职责
+
+- 启动 Orbbec Gemini2 RGB-D 相机并发布彩色图、深度图和相机内参；
+- 使用 YOLO BPU 检测常见生活物品，输出二维框和三维坐标；
+- 使用传统 detector 识别小黄鸭、绿色药盒、大樱桃等指定目标；
+- 完成相机坐标到机械臂 `base_link` 的坐标转换；
+- 控制 AIRBOT Play 六轴机械臂和 G2 夹爪执行抓取、抬升和复位；
+- 运行五类情绪识别，输出 happy、neutral、surprise、low_mood、negative_distress；
+- 将桌面物体和情绪上下文发布给语音侧，用于问答、陪伴和干预；
+- 订阅语音侧 `/command`，根据任务自动启动识别和抓取链路。
 
 ## 目录结构
 
@@ -24,6 +27,59 @@ vision_arm_x5/
 └── start_auto_grasp.sh
 ```
 
+## 功能链路
+
+### 物品识别与桌面问答
+
+YOLO 常驻运行，识别桌面上的 COCO 常见生活物品，并由 `vision_voice_bridge.py` 整理成语音侧可直接消费的中文文本和 JSON：
+
+```text
+Gemini2 RGB-D
+  -> detect_yolo_node
+  -> /yolo_detections
+  -> vision_voice_bridge.py
+  -> /vision/scene_text, /vision/dialogue_context
+```
+
+当用户问“桌子上有什么”时，语音侧可以直接读取 `/vision/scene_text` 或 `/vision/dialogue_context` 回答。
+
+### 视觉定位与机械臂抓取
+
+```text
+目标 3D 坐标
+  -> camera_to_base_transform.py
+  -> /visual_target_base
+  -> grasp_task_open_loop
+  -> arm_executor_node
+  -> AIRBOT SDK
+```
+
+支持目标：
+
+```text
+苹果、香蕉、瓶子、蛋糕、小黄鸭、绿色药盒、大樱桃
+```
+
+其中苹果、香蕉、瓶子、蛋糕来自 YOLO；小黄鸭、绿色药盒、大樱桃来自 detector。
+
+### 情绪识别与主动陪护
+
+```text
+人脸图像
+  -> emotion_fusion_node.py
+  -> /emotion/result
+  -> vision_voice_bridge.py
+  -> /vision/emotion_context, /vision/dialogue_context
+```
+
+当情绪为 `low_mood` 或 `negative_distress` 时，视觉侧会标记：
+
+```json
+{"intervention_required": true}
+```
+
+语音侧可据此触发安抚、陪伴、询问是否需要帮助或进一步求助。
+
 ## 编译
 
 ```bash
@@ -38,7 +94,7 @@ colcon build --symlink-install
 
 ## 推荐启动顺序
 
-### 1. 启动 AIRBOT CAN server
+### 1. AIRBOT CAN server
 
 AIRBOT 使用 `can1`：
 
@@ -46,13 +102,13 @@ AIRBOT 使用 `can1`：
 sudo airbot_server -i can1 -p 50001
 ```
 
-或使用脚本：
+或：
 
 ```bash
 bash /home/sunrise/robot/start_airbot_can1.sh
 ```
 
-### 2. 启动 Orbbec 相机
+### 2. Orbbec 相机
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -70,7 +126,7 @@ ros2 launch orbbec_camera gemini2.launch.py \
   color_fps:=30
 ```
 
-### 3. 常驻 YOLO
+### 3. YOLO 常驻
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -79,12 +135,7 @@ source /home/sunrise/robot/Orbbec_ws/install/setup.bash
 ros2 run detect_yolo detect_yolo_node
 ```
 
-常驻 YOLO 同时服务两件事：
-
-- 给语音侧回答“桌子上有什么”；
-- 给苹果、香蕉、瓶子、蛋糕抓取提供 3D 坐标。
-
-### 4. 启动视觉信息桥接
+### 4. 视觉上下文桥接
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -94,16 +145,7 @@ source /home/sunrise/robot/robot_ws/install/setup.bash
 python3 /home/sunrise/robot/hand_to_eye/vision_voice_bridge.py
 ```
 
-发布给语音侧：
-
-```text
-/vision/scene_objects
-/vision/scene_text
-/vision/emotion_context
-/vision/dialogue_context
-```
-
-### 5. 启动语音命令自动抓取管理
+### 5. 语音命令自动抓取管理
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -112,25 +154,15 @@ source /home/sunrise/robot/robot_ws/install/setup.bash
 python3 /home/sunrise/robot/hand_to_eye/arm_task_manager.py
 ```
 
-支持语音侧发布：
-
-```json
-[{"actuator":"机械臂","action":"抓取","params":{"target":"苹果"}}]
-```
-
-支持目标：
-
-```text
-苹果、香蕉、瓶子、蛋糕、小黄鸭、绿色药盒、大樱桃
-```
-
 ## 主要 Topic
 
 | Topic | Type | 说明 |
 | --- | --- | --- |
-| `/command` | `std_msgs/msg/String` | 语音侧发布的抓取命令 |
-| `/arm_task/status` | `std_msgs/msg/String` | 自动抓取管理状态 |
-| `/arm_task/active_object` | `std_msgs/msg/String` | 当前语音指定抓取目标 |
+| `/command` | `std_msgs/msg/String` | 语音侧发布的任务命令 |
+| `/yolo_detections` | `ai_msgs/msg/PerceptionTargets` | YOLO 原始识别结果 |
+| `/vision/scene_text` | `std_msgs/msg/String` | 桌面物体中文播报文本 |
+| `/vision/dialogue_context` | `std_msgs/msg/String` | 物体与情绪统一上下文 |
+| `/emotion/result` | `std_msgs/msg/String` | 情绪识别原始结果 |
 | `/detect_yolo/apple_position` | `geometry_msgs/msg/PointStamped` | 苹果相机坐标 |
 | `/detect_yolo/banana_position` | `geometry_msgs/msg/PointStamped` | 香蕉相机坐标 |
 | `/detect_yolo/bottle_position` | `geometry_msgs/msg/PointStamped` | 瓶子相机坐标 |
@@ -139,7 +171,7 @@ python3 /home/sunrise/robot/hand_to_eye/arm_task_manager.py
 | `/box_position` | `geometry_msgs/msg/PointStamped` | 绿色药盒相机坐标 |
 | `/red_circle_position` | `geometry_msgs/msg/PointStamped` | 大樱桃/红色圆相机坐标 |
 | `/visual_target_base` | `robot_msgs/msg/VisualTarget` | 机械臂抓取目标 |
-| `/robot_arm/executor_status` | `std_msgs/msg/String` | 机械臂执行器状态 |
+| `/robot_arm/executor_status` | `std_msgs/msg/String` | 机械臂执行状态 |
 
 ## 子目录说明
 

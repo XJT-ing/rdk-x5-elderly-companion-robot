@@ -112,7 +112,7 @@ rdk-x5-elderly-companion-robot/
 │   ├── hand_to_eye/            # 手眼标定、坐标转换和验证脚本
 │   ├── docs/                   # 视觉机械臂子系统说明文档
 │   ├── deploy/systemd/         # systemd 部署相关文件
-│   ├── start_airbot_can0.sh
+│   ├── start_airbot_can1.sh
 │   └── start_auto_grasp.sh
 ```
 
@@ -178,7 +178,7 @@ ros2 launch ros_voice voice.launch.py
 视觉机械臂 X5 推荐先单独启动 AIRBOT CAN 服务，再启动视觉抓取链路：
 
 ```bash
-bash /home/sunrise/robot/start_airbot_can0.sh
+bash /home/sunrise/robot/start_airbot_can1.sh
 bash /home/sunrise/robot/start_auto_grasp.sh
 ```
 
@@ -204,7 +204,11 @@ ros2 topic echo /robot_arm/executor_status --once
 | `/voice/command`      | `std_msgs/msg/String`            | 语音识别后的文本指令        |
 | `/command`            | `std_msgs/msg/String`            | 大模型生成的结构化控制命令     |
 | `/duck_position`      | `geometry_msgs/msg/PointStamped` | 小鸭目标在相机坐标系下的位置      |
-| `/apple_position`     | `geometry_msgs/msg/PointStamped` | 苹果目标在相机坐标系下的位置      |
+| `/detect_yolo/apple_position` | `geometry_msgs/msg/PointStamped` | YOLO 苹果目标在相机坐标系下的位置 |
+| `/detect_yolo/banana_position` | `geometry_msgs/msg/PointStamped` | YOLO 香蕉目标在相机坐标系下的位置 |
+| `/detect_yolo/bottle_position` | `geometry_msgs/msg/PointStamped` | YOLO 瓶子目标在相机坐标系下的位置 |
+| `/detect_yolo/cake_position` | `geometry_msgs/msg/PointStamped` | YOLO 蛋糕目标在相机坐标系下的位置 |
+| `/red_circle_position` | `geometry_msgs/msg/PointStamped` | 传统颜色 detector 的红色圆目标位置 |
 | `/box_position`       | `geometry_msgs/msg/PointStamped` | 药盒目标在相机坐标系下的位置      |
 | `/robot_arm/end_pose` | `geometry_msgs/msg/PoseStamped`  | 机械臂末端在 `base_link` 下的位姿 |
 | `/visual_target_base` | `robot_msgs/msg/VisualTarget`    | 视觉目标在 `base_link` 下的统一抓取输入 |

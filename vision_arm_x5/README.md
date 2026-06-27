@@ -37,5 +37,5 @@ vision_arm_x5/
 ├── hand_to_eye/                # 手眼标定与坐标转换
 ├── docs/                       # 子系统说明文档
 ├── deploy/systemd/             # systemd 部署文件
-├── start_airbot_can0.sh        # AIRBOT 服务启动脚本
+├── start_airbot_can1.sh        # AIRBOT 服务启动脚本
 └── start_auto_grasp.sh         # 自动抓取链路启动脚本

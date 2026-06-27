@@ -65,7 +65,7 @@ echo "============================================================"
 echo "AIRBOT Auto Grasp System"
 echo "============================================================"
 echo "Please make sure airbot_server is already running in another terminal:"
-echo "  bash /home/sunrise/robot/start_airbot_can0.sh"
+echo "  bash /home/sunrise/robot/start_airbot_can1.sh"
 echo
 echo "This script uses default ROS2 RMW."
 echo "It does NOT force rmw_cyclonedds_cpp."
